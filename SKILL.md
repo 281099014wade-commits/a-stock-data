@@ -2,7 +2,7 @@
 name: a-stock-data
 description: 当任务需要写代码实际获取A股数据时使用——拉取行情/K线(mootdx+腾讯+百度)、研报(东财+同花顺+iwencai)、信号(热点/北向/龙虎榜/解禁/行业)、资金面(融资融券/大宗/股东户数/分红/资金流)、新闻、财务三表/F10、公告(巨潮)、打板(涨停池/连板/炸板率)、ETF期权(T型报价/希腊字母/IV)、舆情互动(互动易/热榜/人气榜)等真实数据。十层数据源·44端点(含3官方备胎)·内嵌全部可运行代码，自包含零依赖外部文件；优先用通达信(mootdx)/腾讯(不封IP)，东财接口已内置限流防封，主源被封可查「备用源速查」降级。仅在需要调用数据接口取数时使用：A股概念解释、投资观点讨论、策略问答等无需取数的话题不要加载本skill。
 origin: custom
-version: 3.5.0
+version: 3.5.1
 ---
 
 > 📦 项目主页：https://github.com/simonlin1212/a-stock-data — 更新、反馈、支持作者
@@ -1461,14 +1461,31 @@ def board_fund_flow(board_type: str = "industry", period: str = "today",
         fields += ["f66", "f72", "f78", "f84"]   # 超大/大/中/小单净额
 
     url = "https://push2.eastmoney.com/api/qt/clist/get"
-    params = {
-        "pn": "1", "pz": "200", "po": "1", "np": "1",
+    base = {
+        "pz": "200", "po": "1", "np": "1",
         "fltt": "2", "invt": "2", "fid": fid,       # fid + po=1：按该周期主力净额降序
         "fs": _BOARD_FS[board_type],
         "fields": ",".join(dict.fromkeys(fields)),  # 去重保序
     }
-    r = em_get(url, params=params, headers={"User-Agent": UA}, timeout=15)
-    items = r.json().get("data", {}).get("diff", []) or []   # 注：API 的 total 字段不可信，用 len(items)
+    # ⚠️ 板块数超过单页上限：实测行业 496 个、概念 495 个，写死 pz=200 会把两者都截断，
+    # total 也会误报成 200。先取第一页拿真实 total，需要更多才翻页（多数调用 top_n≤200，
+    # 只发一次请求；em_get 有限流，不无谓翻页）。
+    def _page(pn: int):
+        r = em_get(url, params={**base, "pn": str(pn)},
+                   headers={"User-Agent": UA}, timeout=15)
+        d = r.json().get("data") or {}
+        return (d.get("diff") or []), int(d.get("total") or 0)
+
+    items, total = _page(1)
+    want = min(top_n, total) if total else top_n
+    pn = 2
+    while len(items) < want and len(items) < total:
+        more, _ = _page(pn)
+        if not more:
+            break                      # 防御：API 提前返空则停止，避免死循环
+        items += more
+        pn += 1
+    total = max(total, len(items))
 
     rows = []
     for i, it in enumerate(items):
@@ -1491,7 +1508,7 @@ def board_fund_flow(board_type: str = "industry", period: str = "today",
         rows.append(row)
 
     return {"board_type": board_type, "period": period,
-            "total": len(rows), "rows": rows[:top_n]}
+            "total": total, "rows": rows[:top_n]}
 
 # 用法
 d = board_fund_flow("industry", "today", 10)
