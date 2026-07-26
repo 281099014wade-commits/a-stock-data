@@ -2614,7 +2614,10 @@ import pandas as pd
 def full_valuation(code: str) -> dict:
     """单票完整估值分析"""
     # 1. 腾讯实时行情
-    prefix = "sh" if code.startswith(("6","9")) else ("bj" if code.startswith("8") else "sz")
+    # 92 必须先判：北交所 2024-10 起启用 920xxx 号段，裸 startswith("9") 会误判成沪市，
+    # 腾讯对 sh920xxx 返回空载荷（静默失败）。900xxx 沪市 B 股仍走 sh。
+    prefix = ("bj" if code.startswith(("92", "8"))
+              else "sh" if code.startswith(("6", "9")) else "sz")
     url = f"https://qt.gtimg.cn/q={prefix}{code}"
     req = urllib.request.Request(url)
     req.add_header("User-Agent", "Mozilla/5.0")
@@ -2848,7 +2851,9 @@ def dragon_tiger_backup(trade_date: str) -> dict:
 
 def fund_flow_backup(code: str, days: int = 60) -> list:
     """个股资金流备用源（东财被封时用）：新浪，日度四档单净额。"""
-    pre = ("sh" if code.startswith(("6", "9")) else "bj" if code.startswith("8") else "sz") + code
+    # 92 先判：920xxx 是北交所，误判成 sh/sz 时新浪返回空数组（实测 bj920002 有数据、sh/sz 为 []）
+    pre = ("bj" if code.startswith(("92", "8"))
+           else "sh" if code.startswith(("6", "9")) else "sz") + code
     u = (f"https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
          f"MoneyFlow.ssl_qsfx_zjlrqs?page=1&num={days}&sort=opendate&asc=0&daima={pre}")
     req = urllib.request.Request(u, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
