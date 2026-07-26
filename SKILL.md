@@ -316,8 +316,14 @@ def _probe(ip, port, timeout=2.0):
     except Exception:
         return False
 
-def _validate(client) -> bool:
-    """真实取数验活：坏服务器可 TCP 握手通过却回 2 字节空 body → 静默空表。用一次真实 K 线请求兜底。"""
+def _validate(client, market: str = 'std') -> bool:
+    """真实取数验活：坏服务器可 TCP 握手通过却回 2 字节空 body → 静默空表。用一次真实 K 线请求兜底。
+
+    验活样本 '000001' 是 A 股代码，只对 market='std' 有意义。其它市场（如扩展行情 'ext'）
+    用它必然取不到数，会把所有正常服务器都判死、误报「全部不可达」，故非 std 时跳过验活。
+    """
+    if market != 'std':
+        return True
     try:
         df = client.bars(symbol='000001', frequency=9, offset=1)
         return df is not None and not df.empty
@@ -338,14 +344,14 @@ def tdx_client(market='std'):
             continue
         try:
             c = Quotes.factory(market=market, server=(ip, port))
-            if _validate(c):
+            if _validate(c, market):
                 return c
         except Exception:
             continue                                        # 握手过但取数崩 → 跳过下一台
     for kwargs in ({'bestip': True}, {}):                   # fallback: bestip 测速 / 裸 factory
         try:
             c = Quotes.factory(market=market, **kwargs)
-            if _validate(c):
+            if _validate(c, market):
                 return c
         except Exception:
             continue
@@ -1476,15 +1482,19 @@ def board_fund_flow(board_type: str = "industry", period: str = "today",
         d = r.json().get("data") or {}
         return (d.get("diff") or []), int(d.get("total") or 0)
 
+    _PAGE = 200
     items, total = _page(1)
-    want = min(top_n, total) if total else top_n
     pn = 2
-    while len(items) < want and len(items) < total:
+    while len(items) < top_n:
+        if total and len(items) >= total:
+            break                      # 已取满接口声明的总数
         more, _ = _page(pn)
         if not more:
             break                      # 防御：API 提前返空则停止，避免死循环
         items += more
         pn += 1
+        if len(more) < _PAGE:
+            break                      # 不足一页＝已到末页（total 缺失时的收敛条件）
     total = max(total, len(items))
 
     rows = []
