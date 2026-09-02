@@ -45,7 +45,7 @@ Contact: [simonlin0423@gmail.com](mailto:simonlin0423@gmail.com)
 ## Architecture
 
 ```
-China A-Share Full-Stack Data · 11-Layer Architecture · V3.7.1
+China A-Share Full-Stack Data · 11-Layer Architecture · V3.7.2
 │  (Priority: prefer mootdx/Tencent — never IP-banned; Eastmoney only for exclusive data, with built-in throttling)
 ├── Market Data    mootdx + Tencent + Baidu + Sina    Candlesticks (w/ MA5/10/20) + Order Book + PE/PB + Index/ETF
 │                                                     + adjust factors qfq/hfq  ★V3.7
