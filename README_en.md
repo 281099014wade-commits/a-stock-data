@@ -34,10 +34,20 @@ A self-contained Skill file that consolidates raw A-share data from 19 sources i
 
 ---
 
+## Open to AI Roles in Shenzhen
+
+The author is open to AI roles in Shenzhen, particularly in **AI-powered investment research products, Forward Deployed Engineering (FDE), and AI consulting or solutions** at Tencent, other leading technology companies, and financial institutions.
+
+He combines experience in financial institutions with hands-on AI product development, building open-source market data tools and multi-agent systems with **17K+ GitHub stars**.
+
+Contact: [simonlin0423@gmail.com](mailto:simonlin0423@gmail.com)
+
+---
+
 ## Architecture
 
 ```
-China A-Share Full-Stack Data · 11-Layer Architecture · V3.7.1
+China A-Share Full-Stack Data · 11-Layer Architecture · V3.7.2
 │  (Priority: prefer mootdx/Tencent — never IP-banned; Eastmoney only for exclusive data, with built-in throttling)
 ├── Market Data    mootdx + Tencent + Baidu + Sina    Candlesticks (w/ MA5/10/20) + Order Book + PE/PB + Index/ETF
 │                                                     + adjust factors qfq/hfq  ★V3.7
